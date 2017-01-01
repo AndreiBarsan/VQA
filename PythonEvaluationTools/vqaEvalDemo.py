@@ -1,8 +1,21 @@
 # coding: utf-8
 
 import sys
-dataDir = '../../VQA'
-sys.path.insert(0, '%s/PythonHelperTools/vqaTools' %(dataDir))
+
+# Early fix to allow plotting to work with no X server.
+import matplotlib
+matplotlib.use('Agg')
+
+# TODO(andrei): Use this toolkit for the evaluation, since it's the official
+# one, and offers a simple breakdown of our errors based on question categories.
+# TODO(andrei): Make these command-line arguments.
+# data_dir = '../../VQA'
+data_dir = '/data/vqa'
+code_dir = '.'
+experiment_dir = '/tmp'
+
+sys.path.insert(0, '%s/PythonHelperTools/vqaTools' % (code_dir))
+
 from vqa import VQA
 from vqaEvaluation.vqaEval import VQAEval
 import matplotlib.pyplot as plt
@@ -14,17 +27,20 @@ import os
 # set up file names and paths
 taskType    ='OpenEnded'
 dataType    ='mscoco'  # 'mscoco' for real and 'abstract_v002' for abstract
-dataSubType ='train2014'
-annFile     ='%s/Annotations/%s_%s_annotations.json'%(dataDir, dataType, dataSubType)
-quesFile    ='%s/Questions/%s_%s_%s_questions.json'%(dataDir, taskType, dataType, dataSubType)
-imgDir      ='%s/Images/%s/%s/' %(dataDir, dataType, dataSubType)
-resultType  ='fake'
-fileTypes   = ['results', 'accuracy', 'evalQA', 'evalQuesType', 'evalAnsType'] 
+# dataSubType ='train2014'
+dataSubType ='val2014'
+annFile     ='%s/Annotations/%s_%s_annotations.json'%(data_dir, dataType, dataSubType)
+quesFile    ='%s/Questions/%s_%s_%s_questions.json'%(data_dir, taskType, dataType, dataSubType)
+imgDir      ='%s/Images/%s/%s/' %(data_dir, dataType, dataSubType)
+resultType  ='baseline'
+fileTypes   = ['results', 'accuracy', 'evalQA', 'evalQuesType', 'evalAnsType']
 
-# An example result json file has been provided in './Results' folder.  
+# An example result json file has been provided in './Results' folder.
 
-[resFile, accuracyFile, evalQAFile, evalQuesTypeFile, evalAnsTypeFile] = ['%s/Results/%s_%s_%s_%s_%s.json'%(dataDir, taskType, dataType, dataSubType, \
-resultType, fileType) for fileType in fileTypes]  
+[resFile, accuracyFile, evalQAFile, evalQuesTypeFile, evalAnsTypeFile] = [
+    '%s/Results/%s_%s_%s_%s_%s.json'%(experiment_dir, taskType, dataType,
+                                      dataSubType, resultType, fileType) for fileType in fileTypes]
+figFile = '%s/Results/accbars.png' % experiment_dir
 
 # create vqa object and vqaRes object
 vqa = VQA(annFile, quesFile)
@@ -38,7 +54,7 @@ vqaEval = VQAEval(vqa, vqaRes, n=2)   #n is precision of accuracy (number of pla
 If you have a list of question ids on which you would like to evaluate your results, pass it as a list to below function
 By default it uses all the question ids in annotation file
 """
-vqaEval.evaluate() 
+vqaEval.evaluate()
 
 # print accuracies
 print "\n"
@@ -73,12 +89,16 @@ if len(evals) > 0:
 		plt.show()
 
 # plot accuracy for various question types
-plt.bar(range(len(vqaEval.accuracy['perQuestionType'])), vqaEval.accuracy['perQuestionType'].values(), align='center')
+fig = plt.figure()
+# TODO(andrei): Rotate bar labels.
+# ax = fig.gca()
+plt.bar(range(len(vqaEval.accuracy['perQuestionType'])), vqaEval.accuracy[
+    'perQuestionType'].values(), align='center')
 plt.xticks(range(len(vqaEval.accuracy['perQuestionType'])), vqaEval.accuracy['perQuestionType'].keys(), rotation='0',fontsize=10)
 plt.title('Per Question Type Accuracy', fontsize=10)
 plt.xlabel('Question Types', fontsize=10)
 plt.ylabel('Accuracy', fontsize=10)
-plt.show()
+fig.savefig(figFile)
 
 # save evaluation results to ./Results folder
 json.dump(vqaEval.accuracy,     open(accuracyFile,     'w'))

@@ -3,7 +3,7 @@ __version__ = '0.9'
 
 # Interface for accessing the VQA dataset.
 
-# This code is based on the code written by Tsung-Yi Lin for MSCOCO Python API available at the following link: 
+# This code is based on the code written by Tsung-Yi Lin for MSCOCO Python API available at the following link:
 # (https://github.com/pdollar/coco/blob/master/PythonAPI/pycocotools/coco.py).
 
 # The following functions are defined:
@@ -141,7 +141,7 @@ class VQA:
 			print "Question: %s" %(self.qqa[quesId]['question'])
 			for ans in ann['answers']:
 				print "Answer %d: %s" %(ans['answer_id'], ans['answer'])
-		
+
 	def loadRes(self, resFile, quesFile):
 		"""
 		Load result file and return a result object.
@@ -156,7 +156,8 @@ class VQA:
 		res.dataset['data_subtype'] = copy.deepcopy(self.questions['data_subtype'])
 		res.dataset['license'] = copy.deepcopy(self.questions['license'])
 
-		print 'Loading and preparing results...     '
+		print 'Loading and preparing results. Result file %s, question file ' \
+			  '%s...' % (resFile, quesFile)
 		time_t = datetime.datetime.utcnow()
 		anns    = json.load(open(resFile))
 		assert type(anns) == list, 'results is not an array of objects'
@@ -168,7 +169,7 @@ class VQA:
 			if res.dataset['task_type'] == 'Multiple Choice':
 				assert ann['answer'] in self.qqa[quesId]['multiple_choices'], 'predicted answer is not one of the multiple choices'
 			qaAnn                = self.qa[quesId]
-			ann['image_id']      = qaAnn['image_id'] 
+			ann['image_id']      = qaAnn['image_id']
 			ann['question_type'] = qaAnn['question_type']
 			ann['answer_type']   = qaAnn['answer_type']
 		print 'DONE (t=%0.2fs)'%((datetime.datetime.utcnow() - time_t).total_seconds())
