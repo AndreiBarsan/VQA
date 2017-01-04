@@ -88,13 +88,13 @@ class VQAEval:
             resAns = resAns.replace('\n', ' ')
             resAns = resAns.replace('\t', ' ')
             resAns = resAns.strip()
-            resAns = processPunctuation(resAns)
+            resAns = self.processPunctuation(resAns)
             resAns = self.processDigitArticle(resAns)
             gtAcc = []
             gtAnswers = [ans['answer'] for ans in gts[quesId]['answers']]
             if len(set(gtAnswers)) > 1:
                 for ansDic in gts[quesId]['answers']:
-                    ansDic['answer'] = processPunctuation(
+                    ansDic['answer'] = self.processPunctuation(
                         ansDic['answer'])
             for gtAnsDatum in gts[quesId]['answers']:
                 otherGTAns = [item for item in gts[quesId]['answers'] if
@@ -127,14 +127,12 @@ class VQAEval:
 
     def processPunctuation(self, inText):
         outText = inText
-        for p in punct:
-            if (p + ' ' in inText or ' ' + p in inText) or (re.search(commaStrip, inText) != None):
+        for p in self.punct:
+            if (p + ' ' in inText or ' ' + p in inText) or (re.search(self.commaStrip, inText) != None):
                 outText = outText.replace(p, '')
             else:
                 outText = outText.replace(p, ' ')
-        outText = periodStrip.sub("",
-                                  outText,
-                                  re.UNICODE)
+        outText = self.periodStrip.sub("", outText, re.UNICODE)
         return outText
 
 
