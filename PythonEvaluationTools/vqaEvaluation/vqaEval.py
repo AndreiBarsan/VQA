@@ -67,6 +67,9 @@ class VQAEval:
     def evaluate(self, quesIds=None):
         start_ms = int(time.time() * 1000)
 
+        # TODO(andrei): Caching processed ground truth answers could speed
+        # everything up quite a lot!
+
         if quesIds == None:
             quesIds = [quesId for quesId in self.params['question_id']]
         gts = {}
