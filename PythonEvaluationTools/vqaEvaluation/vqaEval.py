@@ -4,40 +4,9 @@ __author__='aagrawal'
 
 # This code is based on the code written by Tsung-Yi Lin for MSCOCO Python API available at the following link:
 # (https://github.com/tylin/coco-caption/blob/master/pycocoevalcap/eval.py).
-import sys
 import re
-
-from sklearn.externals.joblib import Parallel, delayed
-
-def clean_answer(resAns, eval):
-    # resAns      = res[quesId]['answer']
-    resAns      = resAns.replace('\n', ' ')
-    resAns      = resAns.replace('\t', ' ')
-    resAns      = resAns.strip()
-    resAns      = eval.processPunctuation(resAns)
-    resAns      = eval.processDigitArticle(resAns)
-    return resAns
-
-
-def process_gt_accuracy(answers, resAns):
-    # TODO(andrei): Maybe just return float.
-
-    gtAcc = []
-    for gtAnsDatum in answers:
-        otherGTAns = [item for item in answers if item != gtAnsDatum]
-        matchingAns = [item for item in otherGTAns if
-                       item['answer'] == resAns]
-        acc = min(1, float(len(matchingAns)) / 3)
-        gtAcc.append(acc)
-
-    return gtAcc
-
-
-def clean_ground_truths(answers, eval):
-    gtAnswers = [ans['answer'] for ans in answers]
-    if len(set(gtAnswers)) > 1:
-        for ans_dic in answers:
-            ans_dic['answer'] = eval.processPunctuation(ans_dic['answer'])
+import sys
+import time
 
 
 class VQAEval:
@@ -89,17 +58,15 @@ class VQAEval:
                              'an',
                              'the'
                             ]
-
-
         self.periodStrip  = re.compile("(?!<=\d)(\.)(?!\d)")
         self.commaStrip   = re.compile("(\d)(\,)(\d)")
         self.punct        = [';', r"/", '[', ']', '"', '{', '}',
                              '(', ')', '=', '+', '\\', '_', '-',
                              '>', '<', '@', '`', ',', '?', '!']
 
-
     def evaluate(self, quesIds=None):
-        # TODO(andrei): This should be embarrassingly parallel.
+        start_ms = int(time.time() * 1000)
+
         if quesIds == None:
             quesIds = [quesId for quesId in self.params['question_id']]
         gts = {}
@@ -111,34 +78,34 @@ class VQAEval:
         # =================================================
         # Compute accuracy
         # =================================================
-        accQA       = []
+        accQA = []
         accQuesType = {}
-        accAnsType  = {}
-        print "computing accuracy on %d questions" % len(quesIds)
-
-        # pool = Parallel(n_jobs=-1)
-        print "Cleaning generated answers..."
-        clean_answers = {quesId: clean_answer(ans['answer'], self)
-                         for (quesId, ans) in res.iteritems()}
-        print "Done!"
-
-        print "Cleaning ground truth answers..."
+        accAnsType = {}
+        print "computing accuracy"
+        step = 0
         for quesId in quesIds:
-            clean_ground_truths(gts[quesId]['answers'], self)
-        print "Done!"
-
-        print "Computing ground truth accuracies..."
-        gtAccs = {quesId: process_gt_accuracy(gts[quesId]['answers'],
-                                              clean_answers[quesId])
-                  for quesId in quesIds}
-        print "Done"
-
-
-        for step, quesId in enumerate(quesIds):
-            gtAcc  = gtAccs[quesId]
-            quesType    = gts[quesId]['question_type']
-            ansType     = gts[quesId]['answer_type']
-            avgGTAcc = float(sum(gtAcc))/len(gtAcc)
+            resAns = res[quesId]['answer']
+            resAns = resAns.replace('\n', ' ')
+            resAns = resAns.replace('\t', ' ')
+            resAns = resAns.strip()
+            resAns = processPunctuation(resAns)
+            resAns = self.processDigitArticle(resAns)
+            gtAcc = []
+            gtAnswers = [ans['answer'] for ans in gts[quesId]['answers']]
+            if len(set(gtAnswers)) > 1:
+                for ansDic in gts[quesId]['answers']:
+                    ansDic['answer'] = processPunctuation(
+                        ansDic['answer'])
+            for gtAnsDatum in gts[quesId]['answers']:
+                otherGTAns = [item for item in gts[quesId]['answers'] if
+                              item != gtAnsDatum]
+                matchingAns = [item for item in otherGTAns if
+                               item['answer'] == resAns]
+                acc = min(1, float(len(matchingAns)) / 3)
+                gtAcc.append(acc)
+            quesType = gts[quesId]['question_type']
+            ansType = gts[quesId]['answer_type']
+            avgGTAcc = float(sum(gtAcc)) / len(gtAcc)
             accQA.append(avgGTAcc)
             if quesType not in accQuesType:
                 accQuesType[quesType] = []
@@ -149,24 +116,27 @@ class VQAEval:
             self.setEvalQA(quesId, avgGTAcc)
             self.setEvalQuesType(quesId, quesType, avgGTAcc)
             self.setEvalAnsType(quesId, ansType, avgGTAcc)
-
             if step % 2500 == 0:
-                self.updateProgress(step/float(len(quesIds)))
+                self.updateProgress(step / float(len(quesIds)))
+            step = step + 1
 
         self.setAccuracy(accQA, accQuesType, accAnsType)
-        print "Done computing accuracy"
+        end_ms = int(time.time() * 1000)
+        print "\nDone computing accuracy. Took {0}ms".format(end_ms - start_ms)
+
 
     def processPunctuation(self, inText):
         outText = inText
-        for p in self.punct:
-            if (p + ' ' in inText or ' ' + p in inText) or (re.search(self.commaStrip, inText) != None):
+        for p in punct:
+            if (p + ' ' in inText or ' ' + p in inText) or (re.search(commaStrip, inText) != None):
                 outText = outText.replace(p, '')
             else:
                 outText = outText.replace(p, ' ')
-        outText = self.periodStrip.sub("",
-                                      outText,
-                                      re.UNICODE)
+        outText = periodStrip.sub("",
+                                  outText,
+                                  re.UNICODE)
         return outText
+
 
     def processDigitArticle(self, inText):
         outText = []
