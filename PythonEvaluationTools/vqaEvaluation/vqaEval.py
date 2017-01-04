@@ -19,6 +19,27 @@ def clean_answer(resAns, eval):
     return resAns
 
 
+def process_gt_accuracy(answers, resAns):
+    # TODO(andrei): Maybe just return float.
+
+    gtAcc = []
+    for gtAnsDatum in answers:
+        otherGTAns = [item for item in answers if item != gtAnsDatum]
+        matchingAns = [item for item in otherGTAns if
+                       item['answer'] == resAns]
+        acc = min(1, float(len(matchingAns)) / 3)
+        gtAcc.append(acc)
+
+    return gtAcc
+
+
+def clean_ground_truths(answers, eval):
+    gtAnswers = [ans['answer'] for ans in answers]
+    if len(set(gtAnswers)) > 1:
+        for ans_dic in answers:
+            ans_dic['answer'] = eval.processPunctuation(ans_dic['answer'])
+
+
 class VQAEval:
     def __init__(self, vqa, vqaRes, n=2):
         self.n 			  = n
@@ -94,25 +115,27 @@ class VQAEval:
         accQuesType = {}
         accAnsType  = {}
         print "computing accuracy on %d questions" % len(quesIds)
-        step = 0
 
         # pool = Parallel(n_jobs=-1)
+        print "Cleaning generated answers..."
         clean_answers = {quesId: clean_answer(ans['answer'], self)
                          for (quesId, ans) in res.iteritems()}
+        print "Done!"
 
+        print "Cleaning ground truth answers..."
         for quesId in quesIds:
-            # TODO This preprocessing may be the performance culprit.
-            resAns = clean_answers[quesId]
-            gtAcc  = []
-            gtAnswers = [ans['answer'] for ans in gts[quesId]['answers']]
-            if len(set(gtAnswers)) > 1:
-                for ansDic in gts[quesId]['answers']:
-                    ansDic['answer'] = self.processPunctuation(ansDic['answer'])
-            for gtAnsDatum in gts[quesId]['answers']:
-                otherGTAns = [item for item in gts[quesId]['answers'] if item!=gtAnsDatum]
-                matchingAns = [item for item in otherGTAns if item['answer']==resAns]
-                acc = min(1, float(len(matchingAns))/3)
-                gtAcc.append(acc)
+            clean_ground_truths(gts[quesId]['answers'], self)
+        print "Done!"
+
+        print "Computing ground truth accuracies..."
+        gtAccs = {quesId: process_gt_accuracy(gts[quesId]['answers'],
+                                              clean_answers[quesId])
+                  for quesId in quesIds}
+        print "Done"
+
+
+        for step, quesId in enumerate(quesIds):
+            gtAcc  = gtAccs[quesId]
             quesType    = gts[quesId]['question_type']
             ansType     = gts[quesId]['answer_type']
             avgGTAcc = float(sum(gtAcc))/len(gtAcc)
@@ -126,10 +149,9 @@ class VQAEval:
             self.setEvalQA(quesId, avgGTAcc)
             self.setEvalQuesType(quesId, quesType, avgGTAcc)
             self.setEvalAnsType(quesId, ansType, avgGTAcc)
+
             if step % 2500 == 0:
                 self.updateProgress(step/float(len(quesIds)))
-
-            step = step + 1
 
         self.setAccuracy(accQA, accQuesType, accAnsType)
         print "Done computing accuracy"
