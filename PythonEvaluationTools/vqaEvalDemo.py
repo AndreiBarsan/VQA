@@ -93,20 +93,28 @@ if len(evals) > 0:
 		plt.axis('off')
 		plt.show()
 
-# plot accuracy for various question types
-fig = plt.figure()
-# TODO(andrei): Rotate bar labels.
-plt.bar(range(len(vqaEval.accuracy['perQuestionType'])), vqaEval.accuracy[
-    'perQuestionType'].values(), align='center')
-plt.xticks(range(len(vqaEval.accuracy['perQuestionType'])), vqaEval.accuracy['perQuestionType'].keys(), rotation='0',fontsize=10)
-plt.title('Per Question Type Accuracy', fontsize=10)
-plt.xlabel('Question Types', fontsize=10)
-plt.ylabel('Accuracy', fontsize=10)
+# Plot accuracy for various question types as a bar plot.
+fig = plt.figure(figsize=(16, 10))
+plt.bar(range(len(vqaEval.accuracy['perQuestionType'])),
+        vqaEval.accuracy['perQuestionType'].values(),
+        align='center')
+plt.xticks(range(len(vqaEval.accuracy['perQuestionType'])),
+           vqaEval.accuracy['perQuestionType'].keys(),
+           rotation='45', ha='right',
+           fontsize=10)
+plt.title('Per Question Type Accuracy', fontsize=12)
+plt.xlabel('Question Types', fontsize=12)
+plt.ylabel('Accuracy', fontsize=12)
+# Ensure labels fit in the actual figure.
+plt.tight_layout()
 
 # Save the figure in both raster and vector format. The latter looks very
 # pretty when included in LaTeX!
 fig.savefig(figFile + '.png')
 fig.savefig(figFile + '.eps')
+
+print "Saved breakdown plot of accuracy based on question type in figure " \
+      "files {0} and {1}." % (figFile + '.png', figFile + '.eps')
 
 # save evaluation results to ./Results folder
 json.dump(vqaEval.accuracy,     open(accuracyFile,     'w'))
