@@ -27,6 +27,7 @@ import numpy as np
 import json
 import random
 import os
+import pickle
 
 # set up file names and paths
 taskType    ='OpenEnded'
@@ -61,6 +62,18 @@ By default it uses all the question ids in annotation file
 """
 vqaEval.evaluate()
 
+# Can use this to do ghetto caching. Note that dumping can actually be a
+# little slow (~250MiB object).
+# vqa_eval_fpath = os.path.join(experiment_dir, 'lastVqaEval.pkl')
+# with open(vqa_eval_fpath, 'rb') as pfile:
+#     print("Reading CACHED vqaEval from [{0}]. This is for DEBUGGING "
+#           "purposes.".format(vqa_eval_fpath))
+#     vqaEval = pickle.load(pfile)
+
+# with open(vqaEvalFpath, 'wb') as pfile:
+#     print "Dumping vqaEval to file [{0}].".format(vqaEvalFpath)
+#     pickle.dump(vqaEval, pfile)
+
 # print accuracies
 print "\n"
 print "Overall Accuracy is: %.02f\n" %(vqaEval.accuracy['overall'])
@@ -76,13 +89,13 @@ print "\n"
 # demo how to use evalQA to retrieve low score result
 evals = [quesId for quesId in vqaEval.evalQA if vqaEval.evalQA[quesId]<35]   #35 is per question percentage accuracy
 if len(evals) > 0:
-	print 'ground truth answers'
+	print 'Example of mistake\nGround truth answers:'
 	randomEval = random.choice(evals)
 	randomAnn = vqa.loadQA(randomEval)
 	vqa.showQA(randomAnn)
 
 	print '\n'
-	print 'generated answer (accuracy %.02f)'%(vqaEval.evalQA[randomEval])
+	print 'Generated answer (accuracy %.02f)'%(vqaEval.evalQA[randomEval])
 	ann = vqaRes.loadQA(randomEval)[0]
 	print "Answer:   %s\n" %(ann['answer'])
 
@@ -96,13 +109,12 @@ if len(evals) > 0:
 
 # Plot accuracy for various question types as a bar plot.
 fig = plt.figure(figsize=(16, 10))
-plot_x = range(len(vqaEval.accuracy['perQuestionType']))
-plot_y = vqaEval.accuracy['perQuestionType'].values(),
-plot_xlabels = vqaEval.accuracy['perQuestionType'].keys()
+plot_x = np.arange(len(vqaEval.accuracy['perQuestionType']))
+plot_y = np.array(vqaEval.accuracy['perQuestionType'].values())
+plot_xlabels = np.array(vqaEval.accuracy['perQuestionType'].keys())
 
 # Sort everything by accuracy, descending.
 sort_idx = np.argsort(plot_y * -1)
-plot_x = plot_x[sort_idx]
 plot_y = plot_y[sort_idx]
 plot_xlabels = plot_xlabels[sort_idx]
 
@@ -120,7 +132,7 @@ fig.savefig(figFile + '.png')
 fig.savefig(figFile + '.eps')
 
 print "Saved breakdown plot of accuracy based on question type in figure " \
-      "files {0} and {1}." % (figFile + '.png', figFile + '.eps')
+      "files {0} and {1}.".format(figFile + '.png', figFile + '.eps')
 
 # Save detailed evaluation results to the current experiment folder.
 json.dump(vqaEval.accuracy,     open(accuracyFile,     'w'))
